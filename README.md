@@ -11,20 +11,17 @@ Works currently with Google Music, iTunes and Banshee
 Status
 ------
 
-Syncs:
-~~~~~~
+###Syncs:
 - Play count between Google Music, Banshee and an iTunes library located on a linux machine (Specifically Arch)
 
-Other:
-~~~~~~
+###Other:
 - Play count on iTunes does not update, but does contribute to the total playcount (will add when I work on the mac version)
 
 
 TO DO:
 ------
 
-Immediate:
-~~~~~~~~~~
+###Immediate:
 
 - Add requirement section
 - Add installation section
@@ -38,8 +35,7 @@ Immediate:
 - Make it so it scans then prompts user
 
  
-Future:
-~~~~~~~
+###Future:
 
 - Add a way for regular syncing
 - Port to mac for proper iTunes compatibility
