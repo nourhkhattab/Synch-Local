@@ -5,4 +5,5 @@ gmapi
 *.pyc
 *.xml
 __pycache__
+*.swp
 
