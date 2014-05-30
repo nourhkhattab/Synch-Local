@@ -3,5 +3,6 @@ gmapi
 *.db-journal
 *.db
 *.pyc
+*.xml
 __pycache__
 
