@@ -33,6 +33,48 @@ class bDB:
         self.c.execute('UPDATE CoreTracks SET PlayCount = ? WHERE TrackID = ?', t)
         self.conn.commit()
 
+    def getPlists(self):
+        self.c.execute('SELECT P.Name, E.TrackID FROM CorePlaylists P, CorePlaylistEntries E WHERE P.PlaylistID = E.PlaylistID AND P.PrimarySourceID = 1')
+        return self.c.fetchall()
+
+    def pExist(self, name):
+        t = (name,)
+        print(name)
+        self.c.execute('SELECT PlaylistID FROM CorePlaylists WHERE Name = ? AND PrimarySourceID = 1 LIMIT 1', t)
+        r = self.c.fetchall()
+        if len(r) != 0:
+            return True
+        else:
+            return False
+
+    def addPlist(self, name):
+        self.c.execute('SELECT MAX(PlaylistID) FROM CorePlaylists')
+        cnt = self.c.fetchall()[0][0] + 1
+        t = (cnt, name)
+        self.c.execute('INSERT INTO CorePlaylists VALUES (1, ?, ?, -1, 0, 0, 0, 0)', t)
+        self.conn.commit()
+
+    def addToPlist(self, name, track):
+        self.c.execute('SELECT MAX(EntryID) FROM CorePlaylistEntries')
+        cnt = self.c.fetchall()[0][0] + 1
+        
+        t = (name,)
+        self.c.execute('SELECT PlaylistID FROM CorePlaylists WHERE Name = ?', t)
+        pID = self.c.fetchall()[0][0]
+
+        t = (cnt, pID, track) 
+        self.c.execute('INSERT INTO CorePlaylistEntries VALUES (?, ?, ?, 0, 0)', t)
+        self.conn.commit()
+
+    def rmPlist(self, name, track):
+        t = (name,)
+        self.c.execute('SELECT PlaylistID FROM CorePlaylists WHERE Name = ? AND PrimarySourceID = 1', t)
+        pid = self.c.fetchall()[0][0]
+
+        t = (pid, track)
+        self.c.execute('DELETE FROM CorePlaylistEntries WHERE PlaylistID = ? AND TrackID = ?', t)
+        self.conn.commit()
+
     def close(self):
         self.conn.commit()
         self.conn.close()

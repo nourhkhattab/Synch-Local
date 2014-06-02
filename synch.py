@@ -61,7 +61,7 @@ def matchL(glib):
                 db.addGID(u, m['id'])
                 continue
             except IntegrityError:
-                oldid = db.getLID(m['id'])
+                oldid = db.getGLID(m['id'])
                 print("Song match conflict :(")
                 print("This is the raw path of the attempted matching song: " + p)
                 print("This is the raw path of the already matched song: " + db.getPath(oldid))
@@ -119,7 +119,7 @@ def matchL(glib):
                             again = False
                             print("Matched\n")
                         except IntegrityError:
-                            oldid = db.getLID(options[int(sel)])
+                            oldid = db.getGLID(options[int(sel)])
                             db.addGID(oldid, None)
                             db.addGID(u, options[int(sel)])
                             shame += [oldid]
@@ -135,7 +135,7 @@ def updateCount(glib):
             gPC = c['playCount']
         except KeyError:
             gPC = 0
-        dc = db.getLID(c['id'])
+        dc = db.getGLID(c['id'])
         if not dc:
             continue
         lPC = db.getPlay(dc)
@@ -151,12 +151,68 @@ def updateCount(glib):
         PC = gPC + bPC + iPC - iOPC - lPC 
         if PC-lPC > 0:
             db.upPlay(dc, PC)
+        else:
+            continue
         if PC - bPC > 0:
             bdb.upPlay(bid, PC)
         if PC-gPC > 0:
             mc.increment_song_playcount(c['id'], plays=(PC-gPC))
         if iPC > iOPC:
             db.upIPC(dc, iPC)
+
+def updatePlaylists(gpl):
+    oPlist = [(i[1], i[2]) for i in db.getAllPlist()]
+    #irPlist = [(i, l) for i in idb.playlists for l in idb.playlists[i]]
+    brPlist = bdb.getPlists()
+    grPlist = {(i['name'], j['trackId']):j['id'] for i in gpl for j in i['tracks']}
+    gPNames = {i['name']:i['id'] for i in gpl}
+    bPlist = []
+    gPlist = []
+    for i in brPlist:
+        blid = db.getBLID(i[1])
+        if blid:
+            bPlist += [(i[0], blid)]
+    for i in grPlist:
+        glid = db.getGLID(i[1])
+        if glid:
+            gPlist += [(i[0], glid)]
+
+    #iDiff = (set(iPlist) - set(oPlist), set(oPlist) - set(iPlist))
+    bDiff = (set(bPlist) - set(oPlist), set(oPlist) - set(bPlist))
+    gDiff = (set(gPlist) - set(oPlist), set(oPlist) - set(gPlist))
+    tDiff = (bDiff[0] | gDiff[0], bDiff[1] | gDiff[1])
+
+    gDo = (bDiff[0] - gDiff[0], bDiff[1] - gDiff[1])
+    bDo = (gDiff[0] - bDiff[0], gDiff[1] - bDiff[1])
+
+    for i in set([t[0] for t in gDo[0]]):
+        if i not in gPNames:
+            gPNames[i] = mc.create_playlist(i)
+    for i in set([t[0] for t in bDo[0]]):
+        if not bdb.pExist(i):
+            bdb.addPlist(i)
+
+    for i in gDo[0]:
+        mc.add_songs_to_playlist(gPNames[i[0]], db.getGID(i[1]))
+
+    for i in gDo[1]:
+        mc.remove_entries_from_playlist(grPlist[(i[0], db.getGID(i[1]))])
+
+    for i in bDo[0]:
+        bdb.addToPlist(i[0], db.getBID(i[1]))
+
+    for i in bDo[1]:
+        bdb.rmPlist(i[0], db.getBID(i[1]))
+
+    for i in tDiff[0]:
+        db.addPlist(i[0], i[1])
+    
+    for i in tDiff[1]:
+        db.removePlist(i[0], i[1])
+
+    
+
+    
 
         
 db = synchDB()
@@ -169,7 +225,12 @@ mc = ask_for_credentials()
 print("Success!!")
 glib = mc.get_all_songs()
 print("Fetched songs")
-matchL(glib) 
+matchL(glib)
+print("MatchL done")
 updateCount(glib)
+print("Update Count done")
+gpl = mc.get_all_user_playlist_contents()
+print("Fetched playlists")
+updatePlaylists(gpl)
 bdb.close()
 db.close()

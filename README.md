@@ -13,6 +13,7 @@ Status
 
 ###Syncs:
 - Play count between Google Music, Banshee and an iTunes library located on a linux machine (Specifically Arch)
+- Playlists between Google Music and Banshee (iTunes will come when ported to OS X due to a dependancy on Applescript)
 
 ###Other:
 - Play count on iTunes does not update, but does contribute to the total playcount (will add when I work on the mac version)
