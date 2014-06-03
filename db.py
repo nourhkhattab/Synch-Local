@@ -2,13 +2,28 @@ import sqlite3
 
 class synchDB:
 
-    def __init__(self):
-        self.conn = sqlite3.connect('database.db')
+    def __init__(self, path):
+        self.conn = sqlite3.connect(path)
         self.c = self.conn.cursor()
         self.c.execute('CREATE TABLE IF NOT EXISTS local (ID INTEGER PRIMARY KEY AUTOINCREMENT, GID TEXT UNIQUE, BID INTEGER UNIQUE, IID INTEGER UNIQUE, Path TEXT NOT NULL UNIQUE, PCount INTEGER DEFAULT 0, IPC INTEGER DEFAULT 0)')
         self.c.execute('CREATE TABLE IF NOT EXISTS playlist (PID INTEGER PRIMARY KEY AUTOINCREMENT, Plist TEXT, ID INTEGER)')
+        self.c.execute('CREATE TABLE IF NOT EXISTS iUP (UP INTEGER DEFAULT 0)')
+        try:
+            self.isUp()
+        except IndexError: 
+            self.c.execute('INSERT INTO iUP VALUES (0)')
         self.conn.commit()
 
+    def isUp(self):
+        self.c.execute('SELECT * FROM iUP')
+        if self.c.fetchall()[0][0] == 1:
+            return True
+        return False
+
+    def notUp(self):
+        self.c.execute('UPDATE iUP SET UP = 0')
+        self.conn.commit()
+    
     def addSong(self, path):
         t = (path,)
         self.c.execute('INSERT INTO local (Path) VALUES (?)', t)
@@ -116,7 +131,7 @@ class synchDB:
         self.c.execute('DELETE FROM local WHERE ID = ?', t)
         self.conn.commit()
 
-    def addPlist(self, lid, plist):
+    def addPlist(self, plist, lid):
         t = (plist, lid)
         self.c.execute('INSERT INTO playlist (plist, ID) VALUES (?, ?)', t)
         self.conn.commit()
@@ -127,7 +142,7 @@ class synchDB:
         self.conn.commit()
 
     def getAllPlist(self):
-        self.c.execute('SELECT * FROM playlist')
+        self.c.execute('SELECT Plist, ID FROM playlist')
         return self.c.fetchall()
         
     def close(self):

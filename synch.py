@@ -144,7 +144,10 @@ def updateCount(glib):
         bPC = bdb.getPC(bid)
         if iid:
             iPC = idb.getPC(iid)
-            iOPC = db.getIPC(dc)
+            if isUp:
+                iOPC = lPC
+            else:
+                iOPC = db.getIPC(dc)
         else:
             iPC = 0
             iOPC = 0
@@ -157,12 +160,15 @@ def updateCount(glib):
             bdb.upPlay(bid, PC)
         if PC-gPC > 0:
             mc.increment_song_playcount(c['id'], plays=(PC-gPC))
-        if iPC > iOPC:
-            db.upIPC(dc, iPC)
+        if PC-iPC > 0:
+            if isUp:
+                db.upIPC(dc, PC)
+            else:
+                db.upIPC(dc, iPC)
 
 def updatePlaylists(gpl):
-    oPlist = [(i[1], i[2]) for i in db.getAllPlist()]
-    #irPlist = [(i, l) for i in idb.playlists for l in idb.playlists[i]]
+    oPlist = db.getAllPlist()
+    iPlist = [(i, l) for i in idb.playlists for l in idb.playlists[i]]
     brPlist = bdb.getPlists()
     grPlist = {(i['name'], j['trackId']):j['id'] for i in gpl for j in i['tracks']}
     gPNames = {i['name']:i['id'] for i in gpl}
@@ -177,13 +183,16 @@ def updatePlaylists(gpl):
         if glid:
             gPlist += [(i[0], glid)]
 
-    #iDiff = (set(iPlist) - set(oPlist), set(oPlist) - set(iPlist))
+    if isUp:
+        iDiff = (set(iPlist) - set(oPlist), set(oPlist) - set(iPlist))
+    else:
+        iDiff = set()
     bDiff = (set(bPlist) - set(oPlist), set(oPlist) - set(bPlist))
     gDiff = (set(gPlist) - set(oPlist), set(oPlist) - set(gPlist))
-    tDiff = (bDiff[0] | gDiff[0], bDiff[1] | gDiff[1])
+    tDiff = (bDiff[0] | gDiff[0] | iDiff[0], bDiff[1] | gDiff[1]| iDiff[1])
 
-    gDo = (bDiff[0] - gDiff[0], bDiff[1] - gDiff[1])
-    bDo = (gDiff[0] - bDiff[0], gDiff[1] - bDiff[1])
+    gDo = (iDiff[0] | bDiff[0] - gDiff[0], iDiff[1] | bDiff[1] - gDiff[1])
+    bDo = (iDiff[0] | gDiff[0] - bDiff[0], iDiff[1] | gDiff[1] - bDiff[1])
 
     for i in set([t[0] for t in gDo[0]]):
         if i not in gPNames:
@@ -210,12 +219,8 @@ def updatePlaylists(gpl):
     for i in tDiff[1]:
         db.removePlist(i[0], i[1])
 
-    
-
-    
-
         
-db = synchDB()
+db = synchDB(home + "/Music/synch.db")
 bdb = bDB()
 idb = iTunesDB(home + "/Music/iTunes/iTunes Library.xml")
 scan()
@@ -227,7 +232,10 @@ glib = mc.get_all_songs()
 print("Fetched songs")
 matchL(glib)
 print("MatchL done")
+isUp = db.isUp()
+print(isUp)
 updateCount(glib)
+db.notUp()
 print("Update Count done")
 gpl = mc.get_all_user_playlist_contents()
 print("Fetched playlists")
