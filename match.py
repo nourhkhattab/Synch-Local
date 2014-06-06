@@ -1,10 +1,8 @@
 import mutagen
-import os
 from mutagen.mp3 import MP3
 from mutagen.flac import FLAC
 from mutagen.mp4 import MP4
 from fuzzywuzzy import fuzz
-from db import synchDB
 
 def match(song, gdic):
     ftype = song[song.rfind('.'):].lower()

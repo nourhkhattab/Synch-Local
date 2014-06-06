@@ -1,4 +1,4 @@
-Synch (V 0.3a)
+Synch (V 0.5b)
 =====
 
 Description
@@ -14,6 +14,13 @@ Status
 ###Syncs:
 - Play count between Google Music, Banshee and an iTunes library
 - Playlists between Google Music, Banshee and iTunes
+- Metadata from Google Music to local files/ iTunes
+- With Google Play Music Manager for optimal matching
+
+Instructions:
+-------------
+- Make sure you have one root folder you store your music in, and for maximum matching make sure its the same one Google play music manager auto scans
+
 
 TO DO:
 ------
@@ -27,9 +34,11 @@ TO DO:
 - Comment code
 - Clean up
 - Make code contributor friendly
-- Add ID3/other metadata sync
 - Add skipcount sync
+- Add ratings sync
 - Make it so it scans then prompts user
+- Sanitize updateMeta
+- Handle deletions and file path changes
 
  
 ###Future:
@@ -38,7 +47,7 @@ TO DO:
 - Port to mac
 - Add GUI
 - Make friendly for the masses
-
+- Add Way to make playlists of over 1000 songs
 
 
 License (from fuzzywuzzy)
