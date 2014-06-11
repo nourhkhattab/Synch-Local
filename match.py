@@ -32,9 +32,12 @@ def match(song, gdic):
         artist = smp['\xa9ART'][0]
         album = smp['\xa9alb'][0] 
     else:
-        name = smp["TIT2"].pprint()[5:].replace('[','(').replace(']',')')
-        artist = smp["TPE1"].pprint()[5:].replace("Feat", "Featuring").replace("Andre 3000", "OutKast").replace("Big Boi", "OutKast")
-        album = smp["TALB"].pprint()[5:]
+        try:
+            name = smp["TIT2"].pprint()[5:].replace('[','(').replace(']',')')
+            artist = smp["TPE1"].pprint()[5:].replace("Feat", "Featuring").replace("Andre 3000", "OutKast").replace("Big Boi", "OutKast")
+            album = smp["TALB"].pprint()[5:]
+        except KeyError:
+            return False
     pmatch = [i for i in gdic if fuzz.token_set_ratio(name, i['title']) > 90]
     if len(pmatch) == 1:
         return pmatch[0]

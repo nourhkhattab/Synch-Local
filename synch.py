@@ -2,6 +2,7 @@ from getpass import getpass
 from db import synchDB
 from itunes import iTunesDB
 from match import match
+from manager import managerDB
 from sqlite3 import IntegrityError
 import sqlite3
 from fuzzywuzzy import fuzz
@@ -24,7 +25,7 @@ class Synch:
         a (str): Desc
     
     """
-    def __init__(self, sPath="/Music/Synch/synch.db", iXML="/Music/iTunes/iTunes Library.xml", bConfig="/.config/banshee-1/banshee.db", mFolder="/Music"):
+    def __init__(self, sPath="/Music/Synch/synch.db", iXML="/Music/iTunes/iTunes Library.xml", bConfig="/.config/banshee-1/banshee.db", mFolder="/Music", gManagerPath="/.config/google-musicmanager/ServerDatabase.db"):
         """ Builds and returns a Synch Object.
 
         Args:
@@ -40,6 +41,7 @@ class Synch:
         self.home = expanduser("~") # Home path
         self.mFolder = mFolder
         self.db = synchDB(self.home + sPath) # Creates/Opens Synch database
+        self.man = managerDB(self.home + gManagerPath, self.home, self.mFolder) # Connect to Google Music Manager database
         self.bdb = bDB(self.home + bConfig) # Opens banshee database
         self.idb = iTunesDB(self.home + iXML) # Opens iTunes XML
         self.createLocalDB() # Scans all files 
@@ -49,6 +51,7 @@ class Synch:
         print("Login Successfull")
         self.glib = self.mc.get_all_songs()
         print("Fetched songs")
+        self.scanGMusic()
         self.matchL()
         self.metadata()
         self.isUp = self.db.isUp()
@@ -59,6 +62,7 @@ class Synch:
         self.db.notUp()
         self.bdb.close()
         self.db.close()
+        self.man.close()
 
     def createLocalDB(self):
         """Adds all local music to the synch database and extracts metadata
@@ -73,22 +77,6 @@ class Synch:
                     pth = os.path.join(root, file)
                     if pth.decode('utf-8') not in allPaths and "iTunes Media" not in pth.decode('utf-8'): # Exempt all music imported into iTunes to prevent Duplicates
                         lid = db.addSong(pth.decode('utf-8'))
-                        
-                        # Below adds metadata 
-
-                        sng = GLB(pth, easy=True)
-                        title=artist=albumArtist=album=" "
-                        if 'title' in sng:
-                            title = sng['title'][0]
-                        if 'artist' in sng:
-                            artist = sng['artist'][0]
-                        if 'performer' in sng:
-                            albumArtist = sng['performer'][0]
-                        if 'albumArtist' in sng:
-                            albumArtist = sng['albumArtist'][0]
-                        if 'album' in sng:
-                            album = sng['album'][0]
-                        db.addMeta(lid, title, artist, albumArtist, album)
 
         print("Finished scan of local files")
 
@@ -103,6 +91,16 @@ class Synch:
             db.addBID(i, bdb.getID(db.getPath(i))) # Add Banshee id to song
 
         print("Finished scanning Banshee")
+
+    def scanGMusic(self):
+        db = self.db
+        print('Scanning Google Library')
+        glib = self.glib
+        gids = [i['id'] for i in glib]
+        remove = [db.getGLID(j) for j in db.getAllGID() if j not in gids]
+        for i in remove:
+            db.addGID(i, None)
+        print('Finished Scan')
 
     def scaniTunes(self):
         """ Scan iTunes files and add them to local db
@@ -120,7 +118,7 @@ class Synch:
 
         print("Finished iTunes scan")
 
-    def matchL(self, gManagerPath="/.config/google-musicmanager/ServerDatabase.db"):
+    def matchL(self):
         """Match local music to google music
 
         Args:
@@ -130,14 +128,11 @@ class Synch:
         print("Starting local to google match")
         glib = self.glib
         db = self.db
+        man = self.man
         unmatched = db.getUnmatched() # Get all songs without a Google Music ID
-        dconn = sqlite3.connect(self.home + gManagerPath) # Connect to Google Music Manager database
-        dcur = dconn.cursor()
         for u in unmatched:
             p = db.getPath(u)
-            t = (p[len(self.home) + len(self.mFolder) + 1:],) # Because Google Music works with a relative path
-            dcur.execute('SELECT ServerId FROM XFILES WHERE FileHandle = ?', t)
-            r = dcur.fetchall()
+            r = man.getGID(p)
             if r: # If file is in Google Music Managers database 
                 try:
                     db.addGID(u,r[0][0])
@@ -221,7 +216,6 @@ class Synch:
                             except (ValueError, IndexError):
                                 term = raw_input("New search term: ")
         print("Finished")
-        dconn.close()
 
 
     def updateCount(self):
@@ -343,41 +337,58 @@ class Synch:
     def metadata(self):
         """ Updates metadata
         """
-        print("Starting to update metadata :"), 
+        print("Starting to update metadata") 
         glib = self.glib
         db = self.db
+        man = self.man
+        mMeta = {}
+        for g in man.getAllMeta():
+            mMeta[g[0]] = {'title':g[1], 'artist':g[3], 'albumArtist':g[4], 'album':g[2], 'genre':g[6], 'trackNumber':g[7], 'totalTrackCount':g[8], 'diskNumber':g[9], 'totalDiskCount':g[10]}
         for i in glib:
             lid = db.getGLID(i['id'])
             if not lid:
                 continue 
             ipath = db.getPath(lid)
-            if ".mp3" not in ipath.lower():
-                continue
-            
-            if 'albumArtRef' in i and not db.hasArt(lid):
-                itag = ID3(ipath)
-                itag.add(APIC(encoding=3, mime='image/jpeg', type=3, data=urllib.urlopen(i['albumArtRef'][0]['url']).read()))
-                itag.save()
-                db.updateMeta(lid, 'Artwork', "yes")
+            try:
+                m = mMeta[i['id']]
+            except KeyError:
+                db.addGID(lid, None)
+                continue 
+            tags = [t for t in m for j in i if t == j]
+            nMatch = []
+            for t in tags:
+                if m[t] != i[t]:
+                    nMatch += [t]
+            if nMatch:
+                if '.mp3' in ipath or '.m4a' in ipath:
+                    try:
+                        sng = GLB(ipath, easy=True) 
+                    except IOError:
+                        db.remove(lid)
+                        continue
+                else:
+                    continue
+                for n in nMatch:
+                    if '.mp3' in ipath and n == 'albumArtist':
+                        sng['performer'] = [i['albumArtist']]
+                        man.setMeta(i['id'], 'MusicAlbumArtist', i['albumArtist'])
+                    else:
+                        if n in ('trackNumber', 'totalTrackCount', 'diskNumber', 'totalDiskCount'):
+                            if n in ('trackNumber', 'totalTrackCount'):
+                                sng['tracknumber'] = [str(i['trackNumber']) + '/' + str(i['totalTrackCount'])]
+                                man.setMeta(i['id'], 'MusicTrackNumber', int(i['trackNumber']))
+                                man.setMeta(i['id'], 'MusicTrackCount', int(i['totalTrackCount']))
+                            else:
+                                sng['disknumber'] = [str(i['diskNumber']) + '/' + str(i['totalDiskCount'])]
+                                man.setMeta(i['id'], 'MusicDiscNumber', int(i['discNumber']))
+                                man.setMeta(i['id'], 'MusicDiscCount', int(i['totalDiscCount']))
+                        else:
+                            sng[n.lower()] = [i[n]]
+                            man.setMeta(i['id'], n.lower().replace('title', 'MusicName').replace('albumArtist', 'MusicAlbumArtist').replace('album', 'MusicAlbum').replace('artist', 'MusicArtist').replace('genre', 'MusicGenre'), i[n])
+                    db.setUpMeta(lid)
+                sng.save()
 
-            
-            meta = db.getMeta(lid)
-            dMeta = {'title':meta[0], 'artist':meta[1], 'albumArtist':meta[2], 'album':meta[3]}
-            diff = [j for j in dMeta if i[j] != dMeta[j]]
-            if not diff:
-                continue
-            itag = ID3(ipath)
-            for m in diff:
-                db.updateMeta(lid, m, i[m])
-            itag.add(TIT2(encoding=1, text=[i['title']]))
-            itag.add(TPE1(encoding=1, text=[i['artist']]))
-            itag.add(TPE2(encoding=1, text=[i['albumArtist']]))
-            itag.add(TALB(encoding=1, text=[i['album']]))
-            if 'totalDiscCount' in i:
-                itag.add(TPOS(encoding=1, text=[unicode(i['discNumber']) + u'/' + unicode(i['totalDiscCount'])]))
-            if 'totalTrackCount' in i:
-                itag.add(TRCK(encoding=1, text=[unicode(i['trackNumber']) + u'/' + unicode(i['totalTrackCount'])]))
-            itag.save()
+
         print("Finished updating metadata")
 
 synchO = Synch()        

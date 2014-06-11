@@ -1,4 +1,4 @@
-Synch (V 0.5b)
+Synch (V 0.6a)
 =====
 
 Description
@@ -39,6 +39,7 @@ TO DO:
 - Make it so it scans then prompts user
 - Sanitize updateMeta
 - Handle deletions and file path changes
+- Add Artwork sync
 
  
 ###Future:

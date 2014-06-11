@@ -7,7 +7,6 @@ class synchDB:
         self.c = self.conn.cursor()
         self.c.execute('CREATE TABLE IF NOT EXISTS local (ID INTEGER PRIMARY KEY AUTOINCREMENT, GID TEXT UNIQUE, BID INTEGER UNIQUE, IID INTEGER UNIQUE, Path TEXT NOT NULL UNIQUE, PCount INTEGER DEFAULT 0, IPC INTEGER DEFAULT 0, metUP INTEGER DEFAULT 0)')
         self.c.execute('CREATE TABLE IF NOT EXISTS playlist (Plist TEXT, ID INTEGER, PRIMARY KEY (Plist, ID))')
-        self.c.execute('CREATE TABLE IF NOT EXISTS meta (ID INTEGER PRIMARY KEY, Title TEXT NOT NULL, Artist TEXT NOT NULL, AlbumArtist TEXT NOT NULL, Album TEXT NOT NULL, Artwork TEXT, Track INTEGER DEFAULT 0, TTrack INTEGER DEFAULT 0, Disk INTEGER DEFAULT 0, TDisk INTEGER DEFAULT 0)')
         self.c.execute('CREATE TABLE IF NOT EXISTS iUP (UP INTEGER DEFAULT 1)')
         try:
             self.isUp()
@@ -63,6 +62,10 @@ class synchDB:
         if 'd' * lid == r[0][0]:
             return False
         return r[0][0]
+
+    def getAllGID(self):
+        self.c.execute('SELECT GID FROM local WHERE GID is not NULL')
+        return [j for i in self.c.fetchall() for j in i]
 
     def getGLID(self, gid):
         t = (gid,)
@@ -167,30 +170,11 @@ class synchDB:
         self.c.execute('SELECT Plist, ID FROM playlist')
         return self.c.fetchall()
 
-    def addMeta(self, lid, name, artist, aArtist, album, artwork=None, track=0, ttrack=0, disk=0, tdisk=0):
-        t = (lid, name, artist, aArtist, album, artwork, track, ttrack, disk, tdisk)
-        self.c.execute('INSERT INTO meta Values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)', t)
+    def setUpMeta(self, lid):
         t = (lid,)
         self.c.execute('UPDATE local SET metUP = 1 WHERE ID = ?', t)
         self.conn.commit()
 
-    def updateMeta(self, lid, field, change):
-        t = (change, lid)
-        self.c.execute('UPDATE meta SET '+ field + ' = ? WHERE ID = ?', t)
-        t = (lid,)
-        self.c.execute('UPDATE local SET metUP = 1 WHERE ID = ?', t)
-        self.conn.commit()
-        
-    def getMeta(self, lid):
-        t = (lid,)
-        self.c.execute('SELECT Title, Artist, albumArtist, album, track, ttrack, disk, tdisk FROM meta WHERE ID = ?',t)
-        return self.c.fetchall()[0] 
-
-    def hasArt(self, lid):
-        t = (lid,)
-        self.c.execute('SELECT artwork FROM meta WHERE ID = ?',t)
-        return not not self.c.fetchall()
-         
     def close(self):
         self.conn.commit()
         self.conn.close()
