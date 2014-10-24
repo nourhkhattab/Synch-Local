@@ -40,29 +40,32 @@ class Synch:
         """
         self.home = expanduser("~") # Home path
         self.mFolder = mFolder
-        self.db = synchDB(self.home + sPath) # Creates/Opens Synch database
+        #self.db = synchDB(self.home + sPath) # Creates/Opens Synch database
         self.man = managerDB(self.home + gManagerPath, self.home, self.mFolder) # Connect to Google Music Manager database
-        self.bdb = bDB(self.home + bConfig) # Opens banshee database
-        self.idb = iTunesDB(self.home + iXML) # Opens iTunes XML
-        self.createLocalDB() # Scans all files 
-        self.scanBanshee()
-        self.scaniTunes()
-        self.mc = ask_for_credentials()
-        print("Login Successfull")
-        self.glib = self.mc.get_all_songs()
-        print("Fetched songs")
-        self.scanGMusic()
-        self.matchL()
-        self.metadata()
-        self.isUp = self.db.isUp()
-        self.updateCount()
-        self.gpl = self.mc.get_all_user_playlist_contents()
-        print("Fetched playlists")
-        self.updatePlaylists()
-        self.db.notUp()
-        self.bdb.close()
-        self.db.close()
+        #self.bdb = bDB(self.home + bConfig) # Opens banshee database
+        #self.idb = iTunesDB(self.home + iXML) # Opens iTunes XML
+        #self.createLocalDB() # Scans all files 
+        #self.scanBanshee()
+        #self.scaniTunes()
+        #self.mc = ask_for_credentials()
+        #print("Login Successfull")
+        #self.glib = self.mc.get_all_songs()
+        #print("Fetched songs")
+        #self.scanGMusic()
+        #self.matchL()
+        #self.metadata()
+        #self.isUp = self.db.isUp()
+        #self.updateCount()
+        #self.gpl = self.mc.get_all_user_playlist_contents()
+        #print("Fetched playlists")
+        #self.updatePlaylists()
+        #self.db.notUp()
+        #self.bdb.close()
+        #self.db.close()
         self.man.close()
+
+
+
 
     def createLocalDB(self):
         """Adds all local music to the synch database and extracts metadata

@@ -37,14 +37,13 @@ TO DO:
 - Add skipcount sync
 - Add ratings sync
 - Make it so it scans then prompts user
-- Sanitize updateMeta
 - Handle deletions and file path changes
 - Add Artwork sync
-
+- Upgrade gmusicapi to 4.0.0 stable
  
 ###Future:
 
-- Add a way for regular syncing
+- Add a way for automatic syncing
 - Port to mac
 - Add GUI
 - Make friendly for the masses
